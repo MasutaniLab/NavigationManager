@@ -95,6 +95,7 @@ public class NavigationManagerComp implements ModuleInitProc {
 
         // If you want to run the manager in non-blocking mode, do like this
         // manager.runManager(true);
+        System.exit(1);
     }
 
 }
