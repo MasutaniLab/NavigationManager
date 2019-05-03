@@ -7,6 +7,11 @@
  * $Id$
  */
 
+import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Calendar;
 
 import jp.go.aist.rtm.RTC.DataFlowComponentBase;
@@ -72,26 +77,38 @@ public class NavigationManagerImpl extends DataFlowComponentBase {
 		System.out.println("NavigationManagerImpl.init().");
 		m_currentPose_val = new TimedPose2D(new Time(0, 0), new Pose2D(
 				new Point2D(0, 0), 0));
+		initializeParam(m_currentPose_val);
 		System.out.println("CP1");
 		m_currentPose = new DataRef<TimedPose2D>(m_currentPose_val);
 		m_currentPoseIn = new InPort<TimedPose2D>("currentPose", m_currentPose);
+
 		m_range_val = new RangeData();
+		initializeParam(m_range_val);
 		m_range = new DataRef<RangeData>(m_range_val);
 		m_rangeIn = new InPort<RangeData>("range", m_range);
+
 		m_path_val = new Path2D();
+		initializeParam(m_path_val);
 		m_path = new DataRef<Path2D>(m_path_val);
 		m_pathIn = new InPort<Path2D>("path", m_path);
+
 		m_camera_val = new CameraImage();
+		initializeParam(m_camera_val);
 		m_camera = new DataRef<CameraImage>(m_camera_val);
 		m_cameraIn = new InPort<CameraImage>("camera", m_camera);
+
 		m_targetVelocity_val = new TimedVelocity2D(new RTC.Time(0, 0),
 				new RTC.Velocity2D(0, 0, 0));
+		initializeParam(m_targetVelocity_val);
 		m_targetVelocity = new DataRef<TimedVelocity2D>(m_targetVelocity_val);
 		m_targetVelocityOut = new OutPort<TimedVelocity2D>("targetVelocity",
 				m_targetVelocity);
+
 		m_goal_val = new Waypoint2D();
+		initializeParam(m_goal_val);
 		m_goal = new DataRef<Waypoint2D>(m_goal_val);
 		m_goalOut = new OutPort<Waypoint2D>("goal", m_goal);
+
 		m_mapperServicePort = new CorbaPort("mapperService");
 		m_mapServerPort = new CorbaPort("mapServer");
 		m_pathPlannerPort = new CorbaPort("pathPlanner");
@@ -679,4 +696,55 @@ public class NavigationManagerImpl extends DataFlowComponentBase {
 		}
 	}
 	
+    private void initializeParam(Object target) {
+        Class<?> targetClass = target.getClass();
+        ClassLoader loader = target.getClass().getClassLoader();
+        //
+        Field[] fields = targetClass.getFields();
+        for(Field field : fields) {
+            if(field.getType().isPrimitive()) continue;
+            
+            try {
+                if(field.getType().isArray()) {
+                    Object arrayValue = null;
+                    Class<?> clazz = null;
+                    if(field.getType().getComponentType().isPrimitive()) {
+                        clazz = field.getType().getComponentType();
+                    } else {
+                            clazz = loader.loadClass(field.getType().getComponentType().getName());
+                    }
+                    arrayValue = Array.newInstance(clazz, 0);
+                    field.set(target, arrayValue);
+                    
+                } else {
+                    Constructor<?>[] constList = field.getType().getConstructors();
+                    if(constList.length==0) {
+                        Method[] methodList = field.getType().getMethods();
+                        for(Method method : methodList) {
+                            if(method.getName().equals("from_int")==false) continue;
+                            Object objFld = method.invoke(target, new Object[]{ new Integer(0) });
+                            field.set(target, objFld);
+                            break;
+                        }
+                        
+                    } else {
+                        Class<?> classFld = Class.forName(field.getType().getName(), true, loader);
+                        Object objFld = classFld.newInstance();
+                        initializeParam(objFld);
+                        field.set(target, objFld);
+                    }
+                }
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            } catch (InstantiationException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (IllegalArgumentException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

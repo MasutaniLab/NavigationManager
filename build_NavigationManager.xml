@@ -19,12 +19,21 @@
 		<exec executable="${java.home}/../bin/idlj">
 			<arg line="-td 'src' -i 'idl' -fall 'idl/MobileRobot.idl'"/>
 		</exec>
+		<exec executable="${java.home}/../bin/idlj">
+			<arg line="-td 'src' -i 'idl' -fall 'idl/InterfaceDataTypes.idl'"/>
+		</exec>
+		<exec executable="${java.home}/../bin/idlj">
+			<arg line="-td 'src' -i 'idl' -fall 'idl/BasicDataType.idl'"/>
+		</exec>
+		<exec executable="${java.home}/../bin/idlj">
+			<arg line="-td 'src' -i 'idl' -fall 'idl/ExtendedDataTypes.idl'"/>
+		</exec>
 	</target>
 
 	<target name="compile" depends="idlcompile">
-		<javac srcdir="${source}" destdir="${dest}" encoding="sjis">
+		<javac includeantruntime="false" srcdir="${source}" destdir="${dest}" encoding="sjis">
 			<classpath>
-				<fileset dir="jar">
+				<fileset dir="${env.RTM_JAVA_ROOT}/jar">
 					<include name="*.jar"/>
 				</fileset>
 			</classpath>
